@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌴 무인도 표류 생존 게임</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ocean-deep: #0a2a4a;
+    --ocean-mid: #0d4a6e;
+    --ocean-light: #1a7fa0;
+    --ocean-foam: #7dd4f0;
+    --sand-dark: #c8a96e;
+    --sand-light: #f2dea8;
+    --sand-pale: #fdf5e0;
+    --jungle-dark: #1a4a2e;
+    --jungle-mid: #2d7a4f;
+    --jungle-light: #5ab57a;
+    --sun-gold: #f5a623;
+    --sunset-orange: #e8682a;
+    --white: #ffffff;
+    --text-dark: #1a1a2e;
+    --card-bg: rgba(253, 245, 224, 0.95);
+    --card-border: rgba(200, 169, 110, 0.6);
+    --shadow: 0 8px 32px rgba(10, 42, 74, 0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--ocean-deep);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* ─── ANIMATED OCEAN BACKGROUND ─── */
+  .ocean-bg {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(180deg,
+      #1a3a5c 0%,
+      #0d4a6e 30%,
+      #0a3050 60%,
+      #071e35 100%
+    );
+    z-index: 0;
+  }
+
+  .wave {
+    position: fixed;
+    width: 200%;
+    height: 120px;
+    bottom: 0;
+    left: -50%;
+    z-index: 1;
+    opacity: 0.4;
+  }
+  .wave svg { width: 100%; height: 100%; }
+  .wave:nth-child(1) { animation: waveMove 8s linear infinite; opacity: 0.3; bottom: 0; }
+  .wave:nth-child(2) { animation: waveMove 12s linear infinite reverse; opacity: 0.2; bottom: 20px; }
+  .wave:nth-child(3) { animation: waveMove 6s linear infinite; opacity: 0.15; bottom: 40px; }
+
+  @keyframes waveMove {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(50%); }
+  }
+
+  /* Stars */
+  .stars {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 60%;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .star {
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+    animation: twinkle var(--dur, 3s) ease-in-out infinite;
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 1; }
+  }
+
+  /* Island */
+  .island-silhouette {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0.4;
+  }
+
+  /* ─── MAIN LAYOUT ─── */
+  .app-container {
+    position: relative;
+    z-index: 10;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px 100px;
+  }
+
+  /* ─── HEADER ─── */
+  .game-header {
+    text-align: center;
+    margin-bottom: 32px;
+    padding-top: 20px;
+  }
+  .game-title {
+    font-family: 'Noto Serif KR', serif;
+    font-size: clamp(28px, 5vw, 48px);
+    font-weight: 900;
+    color: var(--sand-light);
+    text-shadow: 0 2px 20px rgba(245, 166, 35, 0.5);
+    letter-spacing: -1px;
+    line-height: 1.1;
+  }
+  .game-subtitle {
+    font-size: 14px;
+    color: var(--ocean-foam);
+    margin-top: 8px;
+    opacity: 0.8;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* ─── CARD BASE ─── */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(10px);
+    width: 100%;
+    max-width: 700px;
+  }
+
+  .card-title {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ocean-deep);
+    margin-bottom: 6px;
+  }
+  .card-desc {
+    font-size: 14px;
+    color: #5a6a7a;
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+
+  /* ─── INPUTS ─── */
+  .input-field {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid var(--card-border);
+    border-radius: 10px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 16px;
+    background: white;
+    color: var(--text-dark);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    margin-bottom: 14px;
+  }
+  .input-field:focus {
+    outline: none;
+    border-color: var(--ocean-light);
+    box-shadow: 0 0 0 3px rgba(26, 127, 160, 0.2);
+  }
+
+  select.input-field {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%230d4a6e' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 40px;
+  }
+
+  /* ─── BUTTONS ─── */
+  .btn {
+    display: inline-block;
+    padding: 13px 28px;
+    border-radius: 50px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--ocean-mid), var(--ocean-light));
+    color: white;
+    box-shadow: 0 4px 15px rgba(13, 74, 110, 0.4);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(13, 74, 110, 0.5); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .btn-success {
+    background: linear-gradient(135deg, var(--jungle-mid), var(--jungle-light));
+    color: white;
+    box-shadow: 0 4px 15px rgba(45, 122, 79, 0.4);
+  }
+  .btn-success:hover { transform: translateY(-2px); }
+  .btn-success:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--ocean-mid);
+    border: 2px solid var(--ocean-mid);
+  }
+  .btn-outline:hover { background: var(--ocean-mid); color: white; }
+
+  .btn-gold {
+    background: linear-gradient(135deg, var(--sun-gold), var(--sunset-orange));
+    color: white;
+    box-shadow: 0 4px 15px rgba(245, 166, 35, 0.4);
+  }
+  .btn-gold:hover { transform: translateY(-2px); }
+  .btn-gold:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* ─── STAGE INDICATORS ─── */
+  .stage-bar {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 24px;
+  }
+  .stage-dot {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    border: 2px solid transparent;
+    transition: all 0.3s;
+  }
+  .stage-dot.done { background: var(--jungle-mid); color: white; }
+  .stage-dot.active { background: var(--sun-gold); color: white; border-color: var(--sunset-orange); box-shadow: 0 0 12px rgba(245, 166, 35, 0.5); }
+  .stage-dot.locked { background: rgba(255,255,255,0.2); color: rgba(255,255,255,0.4); border-color: rgba(255,255,255,0.2); }
+  .stage-line { flex: 1; height: 2px; align-self: center; background: rgba(255,255,255,0.2); border-radius: 2px; max-width: 60px; }
+
+  /* ─── WAITING SCREEN ─── */
+  .waiting-pulse {
+    display: inline-block;
+    width: 12px; height: 12px;
+    background: var(--jungle-light);
+    border-radius: 50%;
+    margin-right: 8px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.4); opacity: 0.6; }
+  }
+
+  /* ─── TEAM MEMBERS LIST ─── */
+  .team-members {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .member-chip {
+    padding: 6px 14px;
+    border-radius: 50px;
+    font-size: 13px;
+    font-weight: 500;
+    background: rgba(13, 74, 110, 0.1);
+    color: var(--ocean-mid);
+    border: 1px solid rgba(13, 74, 110, 0.2);
+  }
+  .member-chip.ready { background: rgba(45, 122, 79, 0.1); color: var(--jungle-mid); border-color: rgba(45, 122, 79, 0.3); }
+
+  /* ─── TOOL CARDS ─── */
+  .tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+  }
+  .tool-card {
+    background: white;
+    border: 2px solid var(--card-border);
+    border-radius: 14px;
+    padding: 16px 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    user-select: none;
+  }
+  .tool-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(10, 42, 74, 0.15); border-color: var(--ocean-light); }
+  .tool-card.selected {
+    background: linear-gradient(135deg, #e8f4fd, #d0eaf8);
+    border-color: var(--ocean-light);
+    box-shadow: 0 0 0 3px rgba(26, 127, 160, 0.25);
+  }
+  .tool-card.disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+  .tool-card.multi-selected {
+    background: linear-gradient(135deg, #e8f8ee, #d0f0db);
+    border-color: var(--jungle-mid);
+  }
+
+  .tool-emoji { font-size: 32px; margin-bottom: 8px; display: block; }
+  .tool-name { font-size: 13px; font-weight: 700; color: var(--text-dark); line-height: 1.3; }
+  .tool-check {
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 20px; height: 20px;
+    background: var(--ocean-light);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 11px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .tool-card.selected .tool-check, .tool-card.multi-selected .tool-check { opacity: 1; }
+  .tool-count-badge {
+    position: absolute;
+    top: -6px; right: -6px;
+    background: var(--jungle-mid);
+    color: white;
+    border-radius: 50%;
+    width: 22px; height: 22px;
+    font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ─── RESULT DISPLAY ─── */
+  .results-grid {
+    display: grid;
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .team-result-card {
+    background: white;
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .team-result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .team-badge {
+    background: var(--ocean-deep);
+    color: var(--sand-light);
+    padding: 4px 12px;
+    border-radius: 50px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .score-badge {
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--ocean-mid);
+  }
+
+  .item-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .item-pill {
+    padding: 4px 10px;
+    border-radius: 50px;
+    font-size: 12px;
+    font-weight: 500;
+    background: rgba(13, 74, 110, 0.08);
+    color: var(--ocean-mid);
+    border: 1px solid rgba(13, 74, 110, 0.15);
+  }
+  .item-pill.duplicate { background: rgba(245, 166, 35, 0.1); color: #b07a00; border-color: rgba(245, 166, 35, 0.3); }
+
+  /* ─── SCORE TABLE ─── */
+  .score-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    margin-top: 16px;
+  }
+  .score-table th {
+    background: var(--ocean-mid);
+    color: white;
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 700;
+  }
+  .score-table th:first-child { border-radius: 8px 0 0 0; }
+  .score-table th:last-child { border-radius: 0 8px 0 0; text-align: right; }
+  .score-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(200, 169, 110, 0.3);
+    color: var(--text-dark);
+  }
+  .score-table td:last-child { text-align: right; font-weight: 700; }
+  .score-table tr:nth-child(even) td { background: rgba(253, 245, 224, 0.5); }
+  .score-table tr.winner td { background: rgba(45, 122, 79, 0.08); }
+
+  .score-diff { font-size: 12px; margin-left: 6px; }
+  .score-diff.up { color: var(--jungle-mid); }
+  .score-diff.down { color: #c0392b; }
+  .score-diff.same { color: #888; }
+
+  /* ─── ALERT / NOTICE ─── */
+  .notice {
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    line-height: 1.5;
+  }
+  .notice-info { background: rgba(26, 127, 160, 0.1); color: #0d4a6e; border: 1px solid rgba(26, 127, 160, 0.25); }
+  .notice-warn { background: rgba(245, 166, 35, 0.1); color: #8a5c00; border: 1px solid rgba(245, 166, 35, 0.3); }
+  .notice-success { background: rgba(45, 122, 79, 0.1); color: var(--jungle-dark); border: 1px solid rgba(45, 122, 79, 0.3); }
+
+  /* ─── ADMIN ─── */
+  .admin-bar {
+    position: fixed;
+    top: 0; right: 0;
+    background: rgba(10, 42, 74, 0.95);
+    color: white;
+    padding: 8px 16px;
+    font-size: 12px;
+    border-radius: 0 0 0 12px;
+    z-index: 100;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .admin-bar button {
+    background: rgba(245, 166, 35, 0.2);
+    color: var(--sun-gold);
+    border: 1px solid rgba(245, 166, 35, 0.4);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .admin-bar button:hover { background: rgba(245, 166, 35, 0.4); }
+
+  /* ─── PROGRESS BAR ─── */
+  .progress-wrap { background: rgba(13, 74, 110, 0.1); border-radius: 50px; height: 8px; overflow: hidden; margin-top: 8px; }
+  .progress-bar { height: 100%; border-radius: 50px; background: linear-gradient(90deg, var(--ocean-light), var(--jungle-light)); transition: width 0.5s; }
+
+  /* ─── SECTION LABEL ─── */
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--ocean-light);
+    margin-bottom: 8px;
+  }
+
+  /* ─── DIVIDER ─── */
+  .divider {
+    height: 1px;
+    background: var(--card-border);
+    margin: 20px 0;
+  }
+
+  /* ─── TOAST ─── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--ocean-deep);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 50px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 200;
+    transition: transform 0.3s;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ─── SCREEN MANAGEMENT ─── */
+  .screen { display: none; width: 100%; max-width: 700px; animation: fadeIn 0.4s ease; }
+  .screen.active { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ─── RANKING ─── */
+  .rank-1 { color: #c8a600; }
+  .rank-2 { color: #888; }
+  .rank-3 { color: #a05c2c; }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 480px) {
+    .tools-grid { grid-template-columns: repeat(3, 1fr); }
+    .card { padding: 20px 16px; }
+  }
+
+  /* Leader select indicator */
+  .leader-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: rgba(245, 166, 35, 0.15);
+    border: 1px solid rgba(245, 166, 35, 0.4);
+    border-radius: 50px;
+    font-size: 13px;
+    color: #8a5c00;
+    margin-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Ocean BG -->
+<div class="ocean-bg"></div>
+<div class="wave" id="w1"><svg viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0,60 C300,120 900,0 1200,60 L1200,120 L0,120 Z" fill="#7dd4f0"/></svg></div>
+<div class="wave" id="w2"><svg viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0,40 C400,100 800,20 1200,80 L1200,120 L0,120 Z" fill="#1a7fa0"/></svg></div>
+<div class="wave" id="w3"><svg viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0,80 C200,40 600,100 1200,50 L1200,120 L0,120 Z" fill="#0d4a6e"/></svg></div>
+
+<!-- Stars -->
+<div class="stars" id="starsContainer"></div>
+
+<!-- Island Silhouette -->
+<svg class="island-silhouette" width="300" height="100" viewBox="0 0 300 100">
+  <ellipse cx="150" cy="90" rx="140" ry="20" fill="#1a4a2e"/>
+  <ellipse cx="120" cy="75" rx="60" ry="18" fill="#2d7a4f"/>
+  <ellipse cx="180" cy="78" rx="45" ry="14" fill="#1a4a2e"/>
+  <path d="M130,70 Q125,30 120,10 Q122,40 140,55" fill="#2d7a4f"/>
+  <path d="M140,55 Q160,30 175,8 Q165,35 145,52" fill="#5ab57a"/>
+  <path d="M180,72 Q175,40 170,20 Q172,45 185,60" fill="#2d7a4f"/>
+</svg>
+
+<!-- Admin Bar -->
+<div class="admin-bar" id="adminBar" style="display:none">
+  <span>🔧 진행자 모드</span>
+  <button onclick="showScreen('screenAdmin');renderAdminDashboard()">대시보드로</button>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Main App -->
+<div class="app-container">
+  <div class="game-header">
+    <div class="game-title">🌴 무인도 표류</div>
+    <div class="game-subtitle">Desert Island Survival Challenge</div>
+  </div>
+
+  <!-- STAGE INDICATORS -->
+  <div class="stage-bar" id="stageBar" style="display:none">
+    <div class="stage-dot locked" id="sd1">1</div>
+    <div class="stage-line"></div>
+    <div class="stage-dot locked" id="sd2">2</div>
+    <div class="stage-line"></div>
+    <div class="stage-dot locked" id="sd3">3</div>
+  </div>
+
+  <!-- ════════════════════════════════ -->
+  <!-- SCREEN 0: LOGIN -->
+  <!-- ════════════════════════════════ -->
+  <div class="screen active" id="screenLogin">
+    <!-- Participant Login (always shown unless ?admin=1) -->
+    <div class="card" id="loginParticipantPanel" style="text-align:center">
+      <div style="font-size:48px;margin-bottom:12px">🚢</div>
+      <div class="card-title" style="text-align:center">참여자 입장</div>
+      <div class="card-desc" style="text-align:center">이름과 소속 팀을 입력하고 게임에 참여하세요</div>
+      <input class="input-field" id="nameInput" placeholder="이름을 입력하세요" maxlength="10" onkeydown="if(event.key==='Enter')handleLogin()">
+      <select class="input-field" id="teamSelect">
+        <option value="">-- 소속 팀 선택 --</option>
+        <option value="1조">1조</option>
+        <option value="2조">2조</option>
+        <option value="3조">3조</option>
+        <option value="5조">5조</option>
+        <option value="6조">6조</option>
+        <option value="7조">7조</option>
+      </select>
+      <button class="btn btn-primary" onclick="handleLogin()" style="width:100%">🌊 입장하기</button>
+    </div>
+
+    <!-- Admin Login -->
+    <div class="card" id="loginAdminPanel" style="text-align:center;display:none">
+      <div style="font-size:48px;margin-bottom:12px">🗺️</div>
+      <div class="card-title" style="text-align:center">진행자 입장</div>
+      <div class="card-desc" style="text-align:center">진행자는 게임에 직접 참여하지 않고 단계를 진행합니다</div>
+      <input class="input-field" id="adminPwInput" type="password" placeholder="진행자 비밀번호" onkeydown="if(event.key==='Enter')handleAdminLogin()">
+      <div class="notice notice-info" style="text-align:left;margin-bottom:16px">
+        🔑 <span>기본 비밀번호: <strong>admin1234</strong></span>
+      </div>
+      <button class="btn btn-gold" onclick="handleAdminLogin()" style="width:100%">🔧 진행자로 입장</button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════ -->
+  <!-- SCREEN 1: WAITING ROOM -->
+  <!-- ════════════════════════════════ -->
+  <div class="screen" id="screenWaiting">
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span class="waiting-pulse"></span>
+        <div class="card-title">대기 중</div>
+      </div>
+      <div class="card-desc">모든 팀원이 접속할 때까지 대기해 주세요</div>
+
+      <div class="notice notice-info">
+        🏝️ <span>당신은 <strong id="waitUserName"></strong>으로 <strong id="waitTeamName"></strong>에 입장했습니다.</span>
+      </div>
+
+      <div class="section-label">현재 접속 현황</div>
+      <div id="waitingTeamsList"></div>
+
+      <div class="divider"></div>
+      <div style="text-align:center;color:#888;font-size:13px;padding:8px 0">
+        진행자가 시작 버튼을 누르면 자동으로 이동합니다
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════ -->
+  <!-- SCREEN 2: STAGE 1 -->
+  <!-- ════════════════════════════════ -->
+  <div class="screen" id="screenStage1">
+    <div class="card">
+      <div class="section-label">1단계 — 개인의 선택</div>
+      <div class="card-title">🏝️ 혼자 표류되었습니다</div>
+      <div class="card-desc">9개의 물건 중 <strong>가장 중요하다고 생각하는 1개</strong>를 선택하세요.<br>점수는 공개되지 않습니다.</div>
+
+      <div class="notice notice-warn">
+        ⚠️ 다른 사람과 상의 없이 <strong>독립적으로</strong> 판단하세요. 점수는 비공개입니다.
+      </div>
+
+      <div class="tools-grid" id="tools1Grid"></div>
+
+      <div id="stage1SelectedInfo" style="display:none;margin-top:8px" class="notice notice-success">
+        ✅ <span id="stage1SelectedName"></span>을(를) 선택했습니다.
+      </div>
+
+      <button class="btn btn-primary" id="confirmStage1Btn" onclick="confirmStage1()" disabled style="width:100%;margin-top:16px">
+        선택 확인 →
+      </button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════ -->
+  <!-- SCREEN 3: STAGE 1 RESULT -->
+  <!-- ════════════════════════════════ -->
+  <div class="screen" id="screenStage1Result">
+    <div class="card">
+      <div class="section-label">1단계 결과</div>
+      <div class="card-title">📊 각 조별 선택 현황</div>
+      <div class="card-desc">우리 조 팀원들이 선택한 물건입니다. (점수 비공개)</div>
+
+      <div id="stage1ResultContent"></div>
+
+      <div class="divider"></div>
+      <div style="text-align:center;color:#888;font-size:13px;padding:8px 0">
+        진행자가 2단계를 시작하면 자동으로 이동합니다
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════ -->
+  <!-- SCREEN ADMIN: ADMIN DASHBOARD -->
+  <!-- ════════════════════════════════ -->
+  <div class="screen" id="screenAdmin">
+    <div class="card">
+      <div class="section-label">진행자 패널</div>
+      <div class="card-title">🗺️ 게임 진행 현황</div>
+      <div class="card-desc">단계를 직접 제어하고 전체 현황을 확인할 수 있습니다.</div>
+
+      <!-- Current stage indicator -->
+      <div style="background:rgba(13,74,110,0.08);border-radius:12px;padding:16px;margin-bottom:20px">
+        <div style="font-size:12px;color:#888;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">현재 단계</div>
+        <div id="adminCurrentStage" style="font-size:18px;font-weight:700;color:var(--ocean-deep)">대기 중</div>
+      </div>
+
+      <!-- Step controls -->
+      <div class="section-label">단계 제어</div>
+      <div style="display:grid;gap:10px;margin-bottom:20px">
+        <button class="btn btn-success" id="adminBtn0to1" onclick="adminGoStage(1)" style="width:100%;text-align:left;padding:14px 20px;border-radius:12px">
+          ▶ 1단계 시작 — 개인 선택
+        </button>
+        <button class="btn btn-primary" id="adminBtn1to2" onclick="adminGoStage(2)" style="width:100%;text-align:left;padding:14px 20px;border-radius:12px" disabled>
+          ▶ 1단계 결과 공개
+        </button>
+        <button class="btn btn-gold" id="adminBtn2to3" onclick="adminGoStage(3)" style="width:100%;text-align:left;padding:14px 20px;border-radius:12px" disabled>
+          ▶ 2단계 시작 — 팀 협의
+        </button>
+        <button class="btn btn-success" id="adminBtn3to4" onclick="adminGoStage(4)" style="width:100%;text-align:left;padding:14px 20px;border-radius:12px" disabled>
+          🏆 최종 결과 공개
+        </button>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Live status -->
+      <div class="section-label">실시간 접속 현황</div>
+      <div id="adminLiveStatus"></div>
+
+      <div class="divider"></div>
+
+      <!-- Danger zone -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn" onclick="adminRefresh()" style="background:rgba(13,74,110,0.1);color:var(--ocean-mid);font-size:13px;padding:10px 18px">
+          🔄 새로고침
+        </button>
+        <button class="btn" onclick="adminReset()" style="background:rgba(200,50,50,0.1);color:#c0392b;border:1px solid rgba(200,50,50,0.25);font-size:13px;padding:10px 18px">
+          🗑 전체 초기화
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════ -->
+  <!-- SCREEN 4: STAGE 2 -->
+  <!-- ════════════════════════════════ -->
+  <div class="screen" id="screenStage2">
+    <div class="card">
+      <div class="section-label">2단계 — 팀 협의</div>
+      <div class="card-title">👥 함께 표류되었습니다</div>
+      <div class="card-desc">팀 공통의 물건 <strong>5개를 결정</strong>하세요. (중복 선택 불가)</div>
+
+      <div id="stage2LeaderInfo"></div>
+
+      <div id="stage2SelectArea">
+        <div class="notice notice-info" id="stage2Notice">
+          💬 팀원들과 충분히 협의한 후, 대표 한 명이 최종 선택을 입력합니다.
+        </div>
+        <div class="tools-grid" id="tools2Grid"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+          <span style="font-size:13px;color:#666">선택됨: <strong id="selected2Count">0</strong> / 5</span>
+          <button class="btn btn-success" id="confirmStage2Btn" onclick="confirmStage2()" disabled>
+            5개 선택 완료 →
+          </button>
+        </div>
+      </div>
+
+      <div id="stage2WaitArea" style="display:none" class="notice notice-success">
+        ✅ 팀 대표가 선택을 완료했습니다. 결과를 기다리는 중...
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════ -->
+  <!-- SCREEN 5: FINAL RESULT -->
+  <!-- ════════════════════════════════ -->
+  <div class="screen" id="screenFinal">
+    <div class="card">
+      <div class="section-label">최종 결과</div>
+      <div class="card-title">🏆 결과 분석</div>
+      <div class="card-desc">1차, 2차 선택 도구와 점수를 비교합니다.</div>
+
+      <div id="finalContent"></div>
+    </div>
+  </div>
+
+</div><!-- /app-container -->
+
+<script type="module">
+// ══════════════════════════════════════════════
+// FIREBASE SETUP
+// ══════════════════════════════════════════════
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue, set, update, remove, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAVcez5cb1h1hUT7_WzxYUngOucqbxT_uw",
+  authDomain: "island-activity-33ae1.firebaseapp.com",
+  databaseURL: "https://island-activity-33ae1-default-rtdb.firebaseio.com",
+  projectId: "island-activity-33ae1",
+  storageBucket: "island-activity-33ae1.firebasestorage.app",
+  messagingSenderId: "1033875309778",
+  appId: "1:1033875309778:web:34097ab23fc4d1504e990b"
+};
+const _app = initializeApp(firebaseConfig);
+const _db = getDatabase(_app);
+const _stateRef = ref(_db, 'gameState');
+
+// Firebase state cache
+let _cachedState = null;
+
+// Listen to Firebase changes in real-time
+onValue(_stateRef, (snap) => {
+  _cachedState = snap.val() || defaultState();
+  navigateToCurrentStage();
+  refreshCurrentScreen();
+});
+
+function getState() {
+  return _cachedState || defaultState();
+}
+
+async function setState(s) {
+  _cachedState = s;
+  await set(_stateRef, s);
+}
+
+// ══════════════════════════════════════════════
+// ADMIN MODE FLAG
+// ══════════════════════════════════════════════
+let isAdmin = false;
+
+// ══════════════════════════════════════════════
+// GAME DATA
+// ══════════════════════════════════════════════
+const TOOLS = [
+  { id: 'knife',    name: '칼',       emoji: '🔪', score: 50  },
+  { id: 'lighter',  name: '라이터',   emoji: '🔥', score: 80  },
+  { id: 'compass',  name: '나침반',   emoji: '🧭', score: 10  },
+  { id: 'tarp',     name: '방수포',   emoji: '⛺', score: 70  },
+  { id: 'water',    name: '물/물통',  emoji: '💧', score: 90  },
+  { id: 'rope',     name: '로프',     emoji: '🪢', score: 20  },
+  { id: 'torch',    name: '손전등',   emoji: '🔦', score: 30  },
+  { id: 'firstaid', name: '구급 상자',emoji: '🩹', score: 60  },
+  { id: 'fishing',  name: '낚시도구', emoji: '🎣', score: 40  },
+];
+
+const TEAMS = ['1조','2조','3조','5조','6조','7조'];
+
+// ══════════════════════════════════════════════
+// STATE — uses localStorage + BroadcastChannel
+// ══════════════════════════════════════════════
+let myName = '';
+let myTeam = '';
+
+// The shared game state key in localStorage
+// STORE_KEY removed (Firebase)
+// BC_KEY removed (Firebase)
+
+// BroadcastChannel removed (Firebase)
+
+// getState / setState are now defined above (Firebase-based)
+
+function defaultState() {
+  return {
+    globalStage: 0, // 0=waiting, 1=stage1, 2=stage1result, 3=stage2, 4=final
+    members: {},    // { "name|team": { name, team, stage1Choice, stage2Leader } }
+    stage1Locked: false,
+    stage2Choices: {}, // { team: [toolId, ...] }
+    stage2Locked: false,
+  };
+}
+
+// ══════════════════════════════════════════════
+// STARS
+// ══════════════════════════════════════════════
+function createStars() {
+  const c = document.getElementById('starsContainer');
+  for (let i = 0; i < 80; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = Math.random() * 2.5 + 0.5;
+    s.style.cssText = `
+      left: ${Math.random()*100}%;
+      top: ${Math.random()*100}%;
+      width: ${size}px; height: ${size}px;
+      --dur: ${(Math.random()*3+2).toFixed(1)}s;
+      animation-delay: ${(Math.random()*4).toFixed(1)}s;
+    `;
+    c.appendChild(s);
+  }
+}
+
+// ══════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ══════════════════════════════════════════════
+// SCREEN NAVIGATION
+// ══════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('stageBar').style.display = id === 'screenLogin' ? 'none' : 'flex';
+  updateStageBar();
+}
+
+function updateStageBar() {
+  const s = getState();
+  const g = s.globalStage;
+  const map = ['sd1','sd1','sd1','sd2','sd3'];
+  // 0=waiting->no active dot, 1=stage1 active, 2=stage1result still 1, 3=stage2, 4=final
+  const dots = [document.getElementById('sd1'), document.getElementById('sd2'), document.getElementById('sd3')];
+  dots.forEach((d,i) => {
+    d.className = 'stage-dot';
+    if (g === 0) { d.classList.add('locked'); }
+    else if (g >= (i+1)*2 - 1) {
+      if (g > (i+1)*1) d.classList.add('done'); else d.classList.add('active');
+    } else { d.classList.add('locked'); }
+  });
+  // simpler logic
+  dots[0].className = 'stage-dot ' + (g >= 2 ? 'done' : g >= 1 ? 'active' : 'locked');
+  dots[1].className = 'stage-dot ' + (g >= 4 ? 'done' : g >= 3 ? 'active' : 'locked');
+  dots[2].className = 'stage-dot ' + (g >= 4 ? 'active' : 'locked');
+}
+
+// ══════════════════════════════════════════════
+// ADMIN LOGIN
+// ══════════════════════════════════════════════
+const ADMIN_PW = 'admin1234';
+
+function handleAdminLogin() {
+  const pw = document.getElementById('adminPwInput').value;
+  if (pw !== ADMIN_PW) { showToast('비밀번호가 틀렸습니다'); return; }
+
+  isAdmin = true;
+  myName = '진행자';
+  myTeam = '';
+  sessionStorage.setItem('desert_user', JSON.stringify({ name: '진행자', team: '', isAdmin: true }));
+
+  document.getElementById('adminBar').style.display = 'flex';
+  document.getElementById('stageBar').style.display = 'none'; // admin doesn't need stage bar
+  showScreen('screenAdmin');
+  renderAdminDashboard();
+  setupBroadcast();
+}
+
+// ══════════════════════════════════════════════
+// ADMIN DASHBOARD RENDER
+// ══════════════════════════════════════════════
+function renderAdminDashboard() {
+  if (!isAdmin) return;
+  const s = getState();
+  const g = s.globalStage;
+
+  const stageNames = ['대기 중', '1단계 진행 중 (개인 선택)', '1단계 결과 공개 중', '2단계 진행 중 (팀 협의)', '최종 결과 공개 중'];
+  document.getElementById('adminCurrentStage').textContent = stageNames[g] || '알 수 없음';
+
+  // Enable/disable buttons based on stage
+  const btns = [
+    { id: 'adminBtn0to1', enableAt: 0 },
+    { id: 'adminBtn1to2', enableAt: 1 },
+    { id: 'adminBtn2to3', enableAt: 2 },
+    { id: 'adminBtn3to4', enableAt: 3 },
+  ];
+  btns.forEach(b => {
+    const el = document.getElementById(b.id);
+    el.disabled = g !== b.enableAt;
+    el.style.opacity = g !== b.enableAt ? '0.4' : '1';
+  });
+
+  // Live status
+  const byTeam = {};
+  TEAMS.forEach(t => byTeam[t] = []);
+  Object.values(s.members).forEach(m => {
+    if (byTeam[m.team]) byTeam[m.team].push(m);
+  });
+
+  let html = '<div style="display:grid;gap:10px">';
+  TEAMS.forEach(teamName => {
+    const members = byTeam[teamName];
+    const chose = members.filter(m => m.stage1Choice).length;
+    const stage2done = s.stage2Choices && s.stage2Choices[teamName] ? '✅ 팀 선택 완료' : '';
+
+    html += `
+      <div style="background:rgba(13,74,110,0.06);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <span style="font-weight:700;color:var(--ocean-deep);font-size:14px">${teamName}</span>
+          <span style="font-size:13px;color:#888;margin-left:8px">${members.length}명 접속</span>
+          ${members.length > 0 ? `<div class="team-members" style="margin-top:6px">${members.map(m=>`<span class="member-chip ${m.stage1Choice?'ready':''}">${m.name}${m.stage1Choice?' ✓':''}</span>`).join('')}</div>` : ''}
+        </div>
+        <div style="text-align:right;font-size:12px">
+          ${g >= 1 ? `<div style="color:var(--jungle-mid)">${chose}/${members.length}명 선택</div>` : ''}
+          ${g >= 3 && stage2done ? `<div style="color:var(--jungle-mid)">${stage2done}</div>` : ''}
+        </div>
+      </div>
+    `;
+  });
+  html += `</div>`;
+  html += `<div style="font-size:12px;color:#aaa;margin-top:8px">총 ${Object.keys(s.members).length}명 접속 중 · 자동 갱신 3초</div>`;
+
+  document.getElementById('adminLiveStatus').innerHTML = html;
+}
+
+async function adminGoStage(targetStage) {
+  const s = getState();
+  s.globalStage = targetStage;
+  setState(s);
+  renderAdminDashboard();
+  showToast(`${['','1단계','1단계 결과','2단계','최종 결과'][targetStage]} 화면으로 전환했습니다`);
+}
+
+function adminRefresh() {
+  renderAdminDashboard();
+  showToast('새로고침 완료');
+}
+
+// ══════════════════════════════════════════════
+// PARTICIPANT LOGIN
+// ══════════════════════════════════════════════
+async function handleLogin() {
+  const name = document.getElementById('nameInput').value.trim();
+  const team = document.getElementById('teamSelect').value;
+  if (!name) { showToast('이름을 입력해주세요'); return; }
+  if (!team) { showToast('팀을 선택해주세요'); return; }
+
+  myName = name;
+  myTeam = team;
+  isAdmin = false;
+
+  const s = getState();
+  const key = `${name}|${team}`;
+  s.members[key] = { name, team, stage1Choice: null };
+  setState(s);
+
+  sessionStorage.setItem('desert_user', JSON.stringify({ name, team, isAdmin: false }));
+  navigateToCurrentStage();
+  setupBroadcast();
+}
+
+// setupBroadcast is replaced by Firebase onValue listener above
+function setupBroadcast() { /* no-op: Firebase handles real-time sync */ }
+
+// ══════════════════════════════════════════════
+// NAVIGATION BASED ON GLOBAL STAGE
+// ══════════════════════════════════════════════
+function navigateToCurrentStage() {
+  if (!myName) return;
+
+  // Admin always stays on admin dashboard
+  if (isAdmin) {
+    document.getElementById('stageBar').style.display = 'none';
+    showScreen('screenAdmin');
+    renderAdminDashboard();
+    return;
+  }
+
+  const s = getState();
+  const g = s.globalStage;
+  const key = `${myName}|${myTeam}`;
+  const me = s.members[key];
+
+  if (g === 0) { renderWaiting(); showScreen('screenWaiting'); }
+  else if (g === 1) {
+    if (me && me.stage1Choice) { renderStage1Result(); showScreen('screenStage1Result'); }
+    else { renderStage1(); showScreen('screenStage1'); }
+  }
+  else if (g === 2) { renderStage1Result(); showScreen('screenStage1Result'); }
+  else if (g === 3) { renderStage2(); showScreen('screenStage2'); }
+  else if (g === 4) { renderFinal(); showScreen('screenFinal'); }
+}
+
+function refreshCurrentScreen() {
+  if (isAdmin) { renderAdminDashboard(); return; }
+  const active = document.querySelector('.screen.active');
+  if (!active) return;
+  const id = active.id;
+  if (id === 'screenWaiting') renderWaiting();
+  else if (id === 'screenStage1Result') renderStage1Result();
+  else if (id === 'screenStage2') renderStage2();
+  else if (id === 'screenFinal') renderFinal();
+}
+
+// ══════════════════════════════════════════════
+// WAITING ROOM
+// ══════════════════════════════════════════════
+function renderWaiting() {
+  const s = getState();
+  document.getElementById('waitUserName').textContent = myName;
+  document.getElementById('waitTeamName').textContent = myTeam;
+
+  const byTeam = {};
+  TEAMS.forEach(t => byTeam[t] = []);
+  Object.values(s.members).forEach(m => {
+    if (byTeam[m.team]) byTeam[m.team].push(m);
+  });
+
+  let html = '';
+  TEAMS.forEach(t => {
+    const members = byTeam[t];
+    html += `<div style="margin-bottom:14px">
+      <div style="font-size:13px;font-weight:700;color:#0d4a6e;margin-bottom:6px">
+        ${t} <span style="font-size:11px;color:#888;font-weight:400">(${members.length}명)</span>
+      </div>
+      <div class="team-members">`;
+    if (members.length === 0) {
+      html += '<span style="font-size:12px;color:#bbb">아직 없음</span>';
+    } else {
+      members.forEach(m => {
+        html += `<span class="member-chip ready">${m.name}</span>`;
+      });
+    }
+    html += `</div></div>`;
+  });
+
+  document.getElementById('waitingTeamsList').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+// STAGE 1: INDIVIDUAL CHOICE
+// ══════════════════════════════════════════════
+let stage1Selection = null;
+
+function renderStage1() {
+  stage1Selection = null;
+  const grid = document.getElementById('tools1Grid');
+  grid.innerHTML = TOOLS.map(t => `
+    <div class="tool-card" id="tc1_${t.id}" onclick="selectTool1('${t.id}')">
+      <span class="tool-emoji">${t.emoji}</span>
+      <div class="tool-name">${t.name}</div>
+      <div class="tool-check">✓</div>
+    </div>
+  `).join('');
+  document.getElementById('confirmStage1Btn').disabled = true;
+  document.getElementById('stage1SelectedInfo').style.display = 'none';
+}
+
+function selectTool1(id) {
+  stage1Selection = id;
+  document.querySelectorAll('#tools1Grid .tool-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById(`tc1_${id}`).classList.add('selected');
+  document.getElementById('confirmStage1Btn').disabled = false;
+
+  const tool = TOOLS.find(t => t.id === id);
+  document.getElementById('stage1SelectedName').textContent = `${tool.emoji} ${tool.name}`;
+  document.getElementById('stage1SelectedInfo').style.display = 'flex';
+}
+
+async function confirmStage1() {
+  if (!stage1Selection) return;
+  const s = getState();
+  const key = `${myName}|${myTeam}`;
+  if (s.members[key]) s.members[key].stage1Choice = stage1Selection;
+  setState(s);
+
+  showToast('선택이 저장되었습니다!');
+  renderStage1Result();
+  showScreen('screenStage1Result');
+}
+
+// ══════════════════════════════════════════════
+// STAGE 1 RESULT
+// ══════════════════════════════════════════════
+function renderStage1Result() {
+  const s = getState();
+  const byTeam = {};
+  TEAMS.forEach(t => byTeam[t] = []);
+  Object.values(s.members).forEach(m => {
+    if (m.stage1Choice && byTeam[m.team]) byTeam[m.team].push(m);
+  });
+
+  let html = '<div class="results-grid">';
+  TEAMS.forEach(teamName => {
+    const members = byTeam[teamName];
+    if (members.length === 0) return;
+
+    // Count choices
+    const counts = {};
+    members.forEach(m => {
+      counts[m.stage1Choice] = (counts[m.stage1Choice] || 0) + 1;
+    });
+
+    // Unique choices (for score)
+    const uniqueIds = Object.keys(counts);
+    const score1 = uniqueIds.reduce((sum, id) => {
+      const tool = TOOLS.find(t => t.id === id);
+      return sum + (tool ? tool.score : 0);
+    }, 0);
+
+    let pillsHtml = '';
+    Object.entries(counts).forEach(([id, cnt]) => {
+      const tool = TOOLS.find(t => t.id === id);
+      if (!tool) return;
+      const isDup = cnt > 1;
+      pillsHtml += `<span class="item-pill ${isDup?'duplicate':''}">${tool.emoji} ${tool.name}${cnt > 1 ? ` ${cnt}개` : ''}</span>`;
+    });
+
+    const isMyTeam = teamName === myTeam;
+    html += `
+      <div class="team-result-card" style="${isMyTeam ? 'border-color:var(--ocean-light);box-shadow:0 0 0 2px rgba(26,127,160,0.2)' : ''}">
+        <div class="team-result-header">
+          <div class="team-badge">${teamName} ${isMyTeam ? '(내 팀)':''}</div>
+          <div style="font-size:13px;color:#888">${members.length}명 참여</div>
+        </div>
+        <div class="item-pills">${pillsHtml || '<span style="color:#bbb;font-size:13px">아직 선택 없음</span>'}</div>
+      </div>
+    `;
+  });
+  html += '</div>';
+
+  document.getElementById('stage1ResultContent').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+// STAGE 2: TEAM CHOICE
+// ══════════════════════════════════════════════
+let stage2Selections = [];
+
+function renderStage2() {
+  const s = getState();
+  const myTeamDone = s.stage2Choices && s.stage2Choices[myTeam];
+
+  // Determine if I'm the "leader" (first member of my team alphabetically)
+  const myTeamMembers = Object.values(s.members).filter(m => m.team === myTeam);
+  const sortedNames = myTeamMembers.map(m => m.name).sort();
+  const isTeamLeader = sortedNames[0] === myName;
+
+  document.getElementById('stage2LeaderInfo').innerHTML = isTeamLeader
+    ? `<div class="leader-indicator">⭐ 귀하가 대표 선택자입니다 — 팀원들과 협의 후 5개를 선택해주세요</div>`
+    : `<div class="notice notice-info">💬 팀원들과 협의하세요. <strong>${sortedNames[0]}</strong>님이 최종 선택을 입력합니다.</div>`;
+
+  if (myTeamDone) {
+    document.getElementById('stage2SelectArea').style.display = 'none';
+    document.getElementById('stage2WaitArea').style.display = 'flex';
+    return;
+  }
+
+  document.getElementById('stage2SelectArea').style.display = 'block';
+  document.getElementById('stage2WaitArea').style.display = 'none';
+  document.getElementById('stage2Notice').style.display = isTeamLeader ? 'none' : 'flex';
+
+  stage2Selections = [];
+
+  const grid = document.getElementById('tools2Grid');
+  grid.innerHTML = TOOLS.map(t => `
+    <div class="tool-card ${!isTeamLeader ? 'disabled' : ''}" id="tc2_${t.id}" onclick="${isTeamLeader ? `selectTool2('${t.id}')` : ''}">
+      <span class="tool-emoji">${t.emoji}</span>
+      <div class="tool-name">${t.name}</div>
+      <div class="tool-check">✓</div>
+    </div>
+  `).join('');
+
+  updateStage2Count();
+}
+
+function selectTool2(id) {
+  const idx = stage2Selections.indexOf(id);
+  const card = document.getElementById(`tc2_${id}`);
+  if (idx > -1) {
+    stage2Selections.splice(idx, 1);
+    card.classList.remove('multi-selected');
+  } else {
+    if (stage2Selections.length >= 5) { showToast('5개까지만 선택할 수 있습니다'); return; }
+    stage2Selections.push(id);
+    card.classList.add('multi-selected');
+  }
+  updateStage2Count();
+}
+
+function updateStage2Count() {
+  document.getElementById('selected2Count').textContent = stage2Selections.length;
+  document.getElementById('confirmStage2Btn').disabled = stage2Selections.length !== 5;
+}
+
+async function confirmStage2() {
+  if (stage2Selections.length !== 5) return;
+  const s = getState();
+  if (!s.stage2Choices) s.stage2Choices = {};
+  s.stage2Choices[myTeam] = stage2Selections;
+  setState(s);
+
+  showToast('팀 선택이 저장되었습니다!');
+  document.getElementById('stage2SelectArea').style.display = 'none';
+  document.getElementById('stage2WaitArea').style.display = 'flex';
+}
+
+// ══════════════════════════════════════════════
+// FINAL RESULT
+// ══════════════════════════════════════════════
+function renderFinal() {
+  const s = getState();
+
+  // Compute stage 1 scores per team
+  const stage1Scores = {};
+  const stage1Items = {};
+  const byTeam = {};
+  TEAMS.forEach(t => { byTeam[t] = []; });
+  Object.values(s.members).forEach(m => {
+    if (m.stage1Choice && byTeam[m.team]) byTeam[m.team].push(m);
+  });
+
+  TEAMS.forEach(teamName => {
+    const members = byTeam[teamName];
+    const uniqueIds = [...new Set(members.map(m => m.stage1Choice).filter(Boolean))];
+    stage1Scores[teamName] = uniqueIds.reduce((sum, id) => {
+      const t = TOOLS.find(t => t.id === id); return sum + (t ? t.score : 0);
+    }, 0);
+    stage1Items[teamName] = uniqueIds.map(id => TOOLS.find(t => t.id === id)).filter(Boolean);
+  });
+
+  // Compute stage 2 scores
+  const stage2Scores = {};
+  const stage2Items = {};
+  TEAMS.forEach(teamName => {
+    const choices = (s.stage2Choices && s.stage2Choices[teamName]) || [];
+    stage2Scores[teamName] = choices.reduce((sum, id) => {
+      const t = TOOLS.find(t => t.id === id); return sum + (t ? t.score : 0);
+    }, 0);
+    stage2Items[teamName] = choices.map(id => TOOLS.find(t => t.id === id)).filter(Boolean);
+  });
+
+  // Sort by stage2 score
+  const teamsWithData = TEAMS.filter(t => stage1Items[t].length > 0 || stage2Items[t].length > 0);
+  teamsWithData.sort((a,b) => stage2Scores[b] - stage2Scores[a]);
+
+  let html = '';
+
+  // Score table
+  html += `
+    <table class="score-table">
+      <thead><tr>
+        <th>팀</th>
+        <th>1단계 점수</th>
+        <th>2단계 점수</th>
+        <th>변화</th>
+      </tr></thead>
+      <tbody>
+  `;
+
+  teamsWithData.forEach((teamName, idx) => {
+    const s1 = stage1Scores[teamName];
+    const s2 = stage2Scores[teamName];
+    const diff = s2 - s1;
+    const diffStr = diff > 0
+      ? `<span class="score-diff up">▲${diff}</span>`
+      : diff < 0
+        ? `<span class="score-diff down">▼${Math.abs(diff)}</span>`
+        : `<span class="score-diff same">→</span>`;
+    const rankIcon = idx===0 ? '🥇' : idx===1 ? '🥈' : idx===2 ? '🥉' : '';
+    html += `
+      <tr ${idx===0?'class="winner"':''}>
+        <td><strong>${rankIcon} ${teamName}</strong></td>
+        <td>${s1}점</td>
+        <td><strong>${s2}점</strong></td>
+        <td>${diffStr}</td>
+      </tr>
+    `;
+  });
+  html += `</tbody></table>`;
+
+  // Detailed breakdown per team
+  html += `<div style="margin-top:24px"><div class="section-label">팀별 상세 결과</div><div class="results-grid">`;
+  teamsWithData.forEach(teamName => {
+    const s1Items = stage1Items[teamName];
+    const s2ItemsList = stage2Items[teamName];
+    const s1 = stage1Scores[teamName];
+    const s2 = stage2Scores[teamName];
+
+    const s1Pills = s1Items.map(t => `<span class="item-pill">${t.emoji} ${t.name} <strong style="color:var(--ocean-mid)">(${t.score}점)</strong></span>`).join('');
+    const s2Pillz = s2ItemsList.map(t => `<span class="item-pill">${t.emoji} ${t.name} <strong style="color:var(--jungle-mid)">(${t.score}점)</strong></span>`).join('');
+
+    html += `
+      <div class="team-result-card" ${teamName===myTeam?'style="border-color:var(--ocean-light)"':''}>
+        <div class="team-result-header">
+          <div class="team-badge">${teamName}</div>
+        </div>
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#888;text-transform:uppercase;margin-bottom:6px">1단계 — 개인 선택 합산 (중복 제외) → ${s1}점</div>
+          <div class="item-pills">${s1Pills || '<span style="color:#bbb;font-size:12px">없음</span>'}</div>
+        </div>
+        <div class="divider" style="margin:10px 0"></div>
+        <div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#888;text-transform:uppercase;margin-bottom:6px">2단계 — 팀 협의 → ${s2}점</div>
+          <div class="item-pills">${s2Pillz || '<span style="color:#bbb;font-size:12px">없음</span>'}</div>
+        </div>
+      </div>
+    `;
+  });
+  html += '</div></div>';
+
+  document.getElementById('finalContent').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+// ADMIN RESET (used in admin dashboard)
+// ══════════════════════════════════════════════
+async function adminReset() {
+  if (!confirm('정말 전체를 초기화하시겠습니까?\n모든 참여자 데이터가 삭제됩니다.')) return;
+  await set(_stateRef, defaultState());
+  renderAdminDashboard();
+  showToast('전체 초기화 완료');
+}
+
+// Polling removed — Firebase onValue handles real-time sync
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+createStars();
+// setInterval removed — Firebase handles sync
+
+// Restore session
+const saved = sessionStorage.getItem('desert_user');
+if (saved) {
+  try {
+    const u = JSON.parse(saved);
+    if (u.isAdmin) {
+      isAdmin = true;
+      myName = '진행자';
+      myTeam = '';
+      document.getElementById('adminBar').style.display = 'flex';
+      document.getElementById('stageBar').style.display = 'none';
+      showScreen('screenAdmin');
+      renderAdminDashboard();
+      setupBroadcast();
+    } else if (u.name && u.team) {
+      myName = u.name;
+      myTeam = u.team;
+      document.getElementById('nameInput').value = myName;
+      document.getElementById('teamSelect').value = myTeam;
+      // Auto-rejoin
+      const s = getState();
+      const key = `${myName}|${myTeam}`;
+      if (!s.members[key]) {
+        s.members[key] = { name: myName, team: myTeam, stage1Choice: null };
+        setState(s);
+      }
+      navigateToCurrentStage();
+      setupBroadcast();
+    }
+  } catch(e) {}
+}
+
+// Also support URL param ?admin=1 — only then reveal the admin login panel
+const params = new URLSearchParams(window.location.search);
+if (params.get('admin') === '1') {
+  document.getElementById('loginParticipantPanel').style.display = 'none';
+  document.getElementById('loginAdminPanel').style.display = 'block';
+}
+</script>
+
+<!-- ══════════════════════════════════════
+     JUPYTER NOTEBOOK SETUP INSTRUCTIONS
+     ══════════════════════════════════════
+
+이 파일을 주피터 노트북에서 실행하려면 아래 코드를 사용하세요:
+
+```python
+from IPython.display import IFrame, HTML, display
+import os
+
+# HTML 파일 경로
+html_path = 'desert_island_game.html'
+
+# 방법 1: IFrame으로 표시 (로컬 파일)
+display(IFrame(src=html_path, width='100%', height='800px'))
+
+# 방법 2: HTML 내용을 직접 출력
+with open(html_path, 'r', encoding='utf-8') as f:
+    html_content = f.read()
+display(HTML(html_content))
+
+# 방법 3: 간이 HTTP 서버로 실행 (70명 동시 접속용)
+# 터미널에서 실행: python -m http.server 8080
+# 브라우저에서: http://[서버IP]:8080/desert_island_game.html
+# 관리자용: http://[서버IP]:8080/desert_island_game.html?admin=1
+```
+
+## 70명 동시접속 배포 방법
+
+### 옵션 A: Python HTTP 서버 (간단)
+```bash
+python -m http.server 8080
+# 접속: http://[서버IP]:8080/desert_island_game.html
+```
+
+### 옵션 B: 실제 서버 동기화 (권장)
+이 파일은 localStorage + BroadcastChannel을 사용합니다.
+같은 기기 내 탭 간 동기화는 완벽하게 작동합니다.
+
+크로스-디바이스 동기화를 위해서는 백엔드가 필요합니다:
+- Firebase Realtime Database (무료 티어로 충분)
+- 또는 Supabase (PostgreSQL + Realtime)
+- 또는 간단한 Node.js + Socket.io 서버
+
+### 옵션 C: ngrok으로 외부 공유
+```bash
+pip install pyngrok
+python -m http.server 8080 &
+ngrok http 8080
+```
+
+## 관리자 접속
+URL에 ?admin=1 추가: http://서버주소/desert_island_game.html?admin=1
+관리자 기능: 단계 강제 진행, 전체 초기화, 현황 확인
+
+-->
+</body>
+</html>
